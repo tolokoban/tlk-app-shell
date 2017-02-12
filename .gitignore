@@ -1,0 +1,7 @@
+*~
+*#
+tmp/
+www/
+node_modules/
+spec/mod/
+
