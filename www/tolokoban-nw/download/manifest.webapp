@@ -1,0 +1,14 @@
+{
+  "launch_path": "/index.html",
+  "developer": {
+    "name": "tolokoban",
+    "url": "https://github.com/tolokoban/cameroun"
+  },
+  "icons": {
+    "128": "/icon-128.png",
+    "512": "/icon-512.png"
+  },
+  "name": "cameroun",
+  "version": "0.2.0",
+  "description": "Cameroun"
+}

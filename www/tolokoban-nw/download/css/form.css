@@ -1,0 +1,19 @@
+div.form > div.table {
+    display: table;
+    width: 100%;
+}
+
+div.form > div.table > div {
+    display: table-row;
+}
+
+div.form > div.table > div > div {
+    display: table-cell;
+    text-align: left;
+    vertical-align: middle;
+    padding: 0 .5rem;
+}
+
+div.form > div.table > div > div:first-child {
+    width: 33%;
+}

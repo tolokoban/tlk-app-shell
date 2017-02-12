@@ -1,0 +1,47 @@
+#vaccins {
+    display: block;
+}
+
+#vaccins > div {
+    display: table;
+    margin: .2rem 0;
+    width: 100%;
+    transition: all .2s;
+    cursor: pointer;
+    height: 2rem;
+    color: rgba(255,255,255,.7);
+}
+
+#vaccins > div > div {
+    display: table-cell;
+    padding: 0 1rem;
+    vertical-align: middle;
+    height: 1.5rem;
+}
+
+#vaccins > div > div.unknown {
+    color: rgba(0,0,0,.5);    
+}
+
+
+#vaccins > div > div:last-child {
+    text-align: right;
+}
+
+#vaccins > div.level-0 {
+    background: #080;
+}
+
+#vaccins > div.level-1 {
+    background: #d60;
+}
+
+#vaccins > div.level-2 {
+    background: #800;
+}
+
+#vaccins > div.level-3 {
+    background: #777;
+}
+
+

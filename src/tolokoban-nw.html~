@@ -1,0 +1,14 @@
+<x-html app="tolokoban-nw">
+    <header><wdg:flex>
+        <content>
+            <div id="title"></div>
+            <wdg:button id="close" 
+                        intl:text="exit" 
+                        $type="simple" 
+                        $icon="close"
+                        slot:action="onExit"/>
+        </content>
+    </wdg:flex></header>
+
+    <iframe id="iframe"></iframe>
+</x-html>

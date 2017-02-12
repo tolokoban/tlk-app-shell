@@ -1,0 +1,104 @@
+.wdg-button {
+    vertical-align: middle;
+    position: relative;
+    display: inline-block;
+    line-height: 2rem;
+    min-height: 2rem;
+    padding: 0 .5rem;
+    background: #9cd;
+    color: #000;
+    text-decoration: none;
+    border-radius: 2px;
+    text-shadow: none;
+    cursor: pointer;
+    margin: 4px 4px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: 1rem;
+    min-width: 64px;
+    transition: all .2s;
+    text-align: left;
+    border: none;
+}
+
+.wdg-button > * {
+    vertical-align: middle;
+    display: block;
+    float: left;
+}
+
+.wdg-button[disabled=yes] > div.wdg-icon {
+    opacity: .25;
+}
+
+.wdg-button > div.wdg-icon.flat {
+    margin: 0 .4rem 0 0;
+}
+
+a.wdg-button.wide, button.wdg-button.wide {
+    display: block;
+    width: 100%;
+}
+
+a.wdg-button.hide, button.wdg-button.hide {
+    display: none;
+}
+
+.wdg-button.small {
+    font-size: 70%;
+    padding: 0 .5rem;
+    margin: 0;
+    font-variant: small-caps;
+    min-width: 2rem;
+}
+
+.wdg-button.dom[disabled=yes]:hover,
+.wdg-button.dom[disabled=yes] {
+    pointer-event: none;
+    text-decoration: none;
+    cursor: default;
+    background: #888;
+    color: rgba(0,0,0,.4);
+    text-shadow: none;
+    box-shadow: none;
+    font-style: italic;
+}
+
+.wdg-button.shadow {
+    background-color: #69A;
+}
+
+.wdg-button.warning {
+    background-color: #c50;
+    color: #fff;
+}
+
+.wdg-button.special {
+    background-color: #9d7;
+}
+
+.wdg-button.simple[disabled=yes] {
+    background: none;
+}
+
+.wdg-button.simple {
+    color: #69b;
+    border-radius: none;
+    background: none;
+    text-shadow: none;
+    box-shadow: none;
+    font-size: 100%;
+    font-weight: bold;
+    line-height: 1rem;
+    min-height: 1rem;
+}
+
+.wdg-button.simple:hover {
+    text-decoration: underline;
+}
+
+.wdg-button:focus {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
