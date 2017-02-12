@@ -1,4 +1,4 @@
-/** @module tolokoban-nw */require( 'tolokoban-nw', function(require, module, exports) { var _=function(){var D={"en":{"bad-repo":"Unable to contact this repository!","confirm-exit":"Are you sure you want to exit this application?","download-progress":"Downloading in progress: $1","exit":"Exit","loading":"Downloading application files...","repository":"Repository's URL"},"fr":{"bad-repo":"Le dépôt spécifié ne répond pas !","confirm-exit":"Êtes-vous sûr de vouloir quitter cette application ?","download-progress":"Téléchargement en cours: $1","exit":"Quitter","loading":"Téléchargement de l'application...","repository":"URL du dépôt"}},X=require("$").intl;function _(){return X(D,arguments);}_.all=D;return _}();
+/** @module tolokoban-nw */require( 'tolokoban-nw', function(require, module, exports) { var _=function(){var D={"en":{"bad-repo":"Unable to contact this repository!","confirm-exit":"Are you sure you want to exit this application?","download-progress":"Downloading in progress: $1","exit":"Exit","install-progress":"Installation in progress: $1","loading":"Downloading application files...","repository":"Repository's URL"},"fr":{"bad-repo":"Le dépôt spécifié ne répond pas !","confirm-exit":"Êtes-vous sûr de vouloir quitter cette application ?","download-progress":"Téléchargement en cours: $1","exit":"Quitter","install-progress":"Installation en cours: $1","loading":"Téléchargement de l'application...","repository":"URL du dépôt"}},X=require("$").intl;function _(){return X(D,arguments);}_.all=D;return _}();
     /**
  * This is an application container.
  * It manages updates in background.
@@ -22,8 +22,10 @@ var g_rootFolder = Path.resolve('.');
 console.info("[tolokoban-nw] g_rootFolder=", g_rootFolder);
 
 exports.start = function() {
-    var installation = Local.get( 'install', null );
-    if( installation ) upgrade( installation );
+    var installation = Local.get( 'tolokoban-nw/install', null );
+    if( installation ) upgrade( installation ).then(function() {
+        $('iframe').setAttribute( 'src', 'index.html' );
+    });
     else launch();
 };
 
@@ -98,6 +100,7 @@ function install( pkg ) {
                 return;
             }
             modal.detach();
+            Local.set('tolokoban-nw/repository', url);
             return response.json();
         }).then(function(list) {
             console.info("[tolokoban-nw] list=", list);
@@ -127,10 +130,10 @@ function download(def) {
     var downloadedFiles = [];
     return new Promise(function (resolve, reject) {
         var next = function() {
-console.info("[tolokoban-nw] def=", def);
+            console.info("[tolokoban-nw] def=", def);
             if( def.files.length == 0 ) {
                 def.files = downloadedFiles;
-                Local.set('install', def);
+                Local.set('tolokoban-nw/install', def);
                 resolve();
                 return;
             }
@@ -173,10 +176,36 @@ function mkdir(folder) {
 }
 
 
-function update( def ) {
-    console.info("[tolokoban-nw] def=", def);
-    alert('upgrage');
-    Local.set('install', null);
+function upgrade( def ) {
+    return new Promise(function (resolve, reject) {
+        var next = function() {
+            if( def.files.length == 0 ) {
+                $('tooltip').textContent = '';
+                Local.set('tolokoban-nw/install', null);
+                resolve();
+                return;
+            }
+            $('tooltip').textContent = _('install-progress', def.files.length);
+            var file = def.files.pop();
+            mkdir( Path.dirname( file ) );
+            FS.readFile( "./tolokoban-nw/download/" + file, function(err, data) {
+                if( err ) {
+                    console.error( err );
+                    reject( err );
+                    return;
+                }
+                FS.writeFile( file, data, function( err ) {
+                    if( err ) {
+                        console.error( err );
+                        reject( err );
+                        return;
+                    }
+                    next();
+                });
+            });
+        };        
+        next();
+    });
 }
 
 
