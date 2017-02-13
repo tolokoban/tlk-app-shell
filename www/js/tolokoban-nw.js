@@ -61,10 +61,16 @@ exports.onExit = exitApp;
  */
 function checkFirstLaunch() {
     return new Promise(function (resolve, reject) {
-        getPackageDef().then(function(pkg) {
-            console.info("[tolokoban-nw] pkg=...", pkg);
-        });
+        getPackageDef().then( downloadPackageIfNeeded )
+        .then( showIndexPage );
     });
+}
+
+/**
+ * Open the page `index.html` in the IFrame.
+ */
+function showIndexPage() {
+    $('iframe').setAttribute( 'src', 'index.html' );
 }
 
 /**
@@ -168,6 +174,56 @@ function getPackageDef() {
                 manageNetworkFailure( url, err ).then( resolve );
             });
         });
+    });
+}
+
+/**
+ * If `get("version")` is missing  or different from `pkg.version`, we
+ * must download the package files.
+ * It  `get("version")` is  not  missing, the  downloads  will run  in
+ * background. Otherwise, we will wait for all the downloads to finish
+ * before resolving.
+ */
+function downloadPackageIfNeeded( pkg ) {
+    // Check existence of download folder.
+    mkdir("tolokoban-nw/download");
+
+    var downloadedFiles = [];
+    return new Promise(function (resolve, reject) {
+        var next = function() {
+            console.info("[tolokoban-nw] pkg=", pkg);
+            if( pkg.files.length == 0 ) {
+                pkg.files = downloadedFiles;
+                // @TODO Mettre dans le bon parametre.
+                Local.set('tolokoban-nw/install666', pkg);
+                resolve();
+                return;
+            }
+            $('tooltip').textContent = _('download-progress', pkg.files.length);
+            var file = pkg.files.pop();
+            mkdir( 'tolokoban-nw/download/' + Path.dirname( file ) );
+            var url = pkg.url + file;
+            fetch( url ).then(function(response) {
+                if( !response.ok ) {
+                    throw Error(response.status + " " + response.statusText + " - " + url);
+                }
+                downloadedFiles.push( file );
+                return response.arrayBuffer();
+            }).then(function(arrayBuffer) {
+                var output = Path.resolve(Path.join(g_rootFolder, "tolokoban-nw/download/", file));
+                var data = new Buffer( arrayBuffer );
+                console.info("[tolokoban-nw] output=", output);
+                console.info("[tolokoban-nw] arrayBuffer=", arrayBuffer);
+                FS.writeFile( output, data, function( err ) {
+                    if( err ) throw Error("Unable to write file: " + output + "\n" + err);
+                    next();
+                });
+            }).catch(function(err) {
+                manageNetworkFailure( url, err ).then( resolve );
+            });
+        };
+
+        next();
     });
 }
 
