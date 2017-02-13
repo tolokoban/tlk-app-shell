@@ -1,4 +1,4 @@
-/** @module tolokoban-nw */require( 'tolokoban-nw', function(require, module, exports) { var _=function(){var D={"en":{"bad-repo":"Unable to contact this repository!","confirm-exit":"Are you sure you want to exit this application?","download-progress":"Downloading in progress: $1","exit":"Exit","install-progress":"Installation in progress: $1","loading":"Downloading application files...","repository":"Repository's URL"},"fr":{"bad-repo":"Le dépôt spécifié ne répond pas !","confirm-exit":"Êtes-vous sûr de vouloir quitter cette application ?","download-progress":"Téléchargement en cours: $1","exit":"Quitter","install-progress":"Installation en cours: $1","loading":"Téléchargement de l'application...","repository":"URL du dépôt"}},X=require("$").intl;function _(){return X(D,arguments);}_.all=D;return _}();
+/** @module tolokoban-nw */require( 'tolokoban-nw', function(require, module, exports) { var _=function(){var D={"en":{"bad-repo":"Unable to contact this repository!","confirm-exit":"Are you sure you want to exit this application?","download-progress":"Downloading in progress: $1","exit":"Exit","install-progress":"Installation in progress: $1","loading":"Downloading application files...","network-error":"<html>An error occured while trying to contact repository <b>$1</b>.<pre class='error'>$2</pre><hr/>A good network connection is mandatory for the first installation.","repository":"Repository's URL"},"fr":{"bad-repo":"Le dépôt spécifié ne répond pas !","confirm-exit":"Êtes-vous sûr de vouloir quitter cette application ?","download-progress":"Téléchargement en cours: $1","exit":"Quitter","install-progress":"Installation en cours: $1","loading":"Téléchargement de l'application...","network-error":"<html>Une erreur est survenur lors de la tentative de connexion au dépôt <b>$1</b>.<pre class='error'>$2</pre><hr/>Une bonne connexion réseau est indispensable lors de la première installation.","repository":"URL du dépôt"}},X=require("$").intl;function _(){return X(D,arguments);}_.all=D;return _}();
     /**
  * This is an application container.
  * It manages updates in background.
@@ -19,22 +19,205 @@ var FS = require("node://fs");
 var Path = require("node://path");
 
 var g_rootFolder = Path.resolve('.');
-console.info("[tolokoban-nw] g_rootFolder=", g_rootFolder);
+var g_config;
+
+function get(key, def) {
+    return Local.get('tolokoban-nw' + '/' + key, def);
+}
+
+function set(key, val) {
+    return Local.set('tolokoban-nw' + '/' + key, val);
+}
+
 
 exports.start = function() {
-    var installation = Local.get( 'tolokoban-nw/install', null );
-    if( installation ) upgrade( installation ).then(function() {
-        $('iframe').setAttribute( 'src', 'index.html' );
+    Modal.alert("Start debugger now!", function() {
+        FS.readFile("package.json", function(err, out) {
+            if( err ) {
+                Err( "<html>Unable to read/parse <b>package.json</b>: <code>" + err.message + "</code>" );
+                return;
+            }
+            try {
+                var jsn = out.toString();
+                g_config = JSON.parse( out.toString() );
+            } catch( ex ) {
+                Err("Bad JSON syntax in `package.json`!");
+                return;
+            }
+            $('title').textContent = g_config.name + " " + g_config.version;
+
+            var pkg = get( 'install' );
+            debugger;
+            if( pkg ) installPackage( pkg ).then( execApp );
+            else checkFirstLaunch();
+        });
     });
-    else launch();
 };
 
+exports.onExit = exitApp;
 
-exports.onExit = function() {
+/**
+ * Check if it is the first launch or not.
+ */
+function checkFirstLaunch() {
+    return new Promise(function (resolve, reject) {
+        getPackageDef().then(function(pkg) {
+            console.info("[tolokoban-nw] pkg=...", pkg);
+        });
+    });
+}
+
+/**
+ * Promise which resolves in an URL of the repository.
+ */
+function getRepositoryUrl() {
+    return new Promise(function (resolve, reject) {
+        var repository = get( 'repository' );
+        if( repository ) return resolve( repository );
+        var repo = new Text({
+            label: _('repository'), wide: false, width: '30rem',
+            value: 'http://localhost/www/Cameroun/index.php'
+        });
+        var loading = new Modal({ padding: true, content: [new Wait({ text: _('loading') })] });
+        var ok = Button.Ok();
+        var exit = new Button({ text: _('exit'), icon: "close", type: 'simple' });
+        exit.on( exitApp );
+        var content = $.div([
+            repo, ok,
+            $.tag('hr'),
+            $.tag('center', [exit])
+        ]);
+        DB.bind( repo, 'action', ok, 'fire' );
+        var modal = new Modal({ padding: true, content: content });
+        modal.attach();
+        window.setTimeout(function() {
+            repo.focus = true;
+        }, 300);
+        ok.on(function() {
+            resolve( repo.value.trim() );
+        });
+    });
+}
+
+/**
+ * Resolves in the URL of the repo and the ID of the package.
+ * `{ repo: <string>, id: <string> }`
+ */
+function getPackageUrl( repoUrl ) {
+    return new Promise(function (resolve, reject) {
+        set( 'repository', repoUrl );
+        var pkgId = get( 'id' );
+        if( pkgId ) resolve( repoUrl + "?" + pkgId );
+        // Ask the repository the list of packages.
+        fetch( repoUrl ).then(function(response) {
+            if( !response.ok ) throw { message: response.status + ": " + response.statusText };
+            return response.json();
+        }).then(function( packagesList ) {
+
+            // @TODO Manage the case of multi packages by adding a selection screen.
+            resolve({
+                repo: repoUrl,
+                id: packagesList[0].id
+            });
+        }).catch(function(err) {
+            manageNetworkFailure( repoUrl, err ).then( resolve );
+        });
+    });
+}
+
+/**
+ * Network errors are ignored if the first installation has already occured.
+ * That means if the `version` storage attribute has already been set.
+ */
+function manageNetworkFailure( url, err ) {
+    return new Promise(function (resolve, reject) {
+        console.error( "Unable to contact ", url, " because of error ", err );
+        if( get('version') ) resolve( null );
+        else {
+            Modal.alert(_('network-error', url, err.message), function() {
+                set('repository', null);
+                set('id', null);
+                set('version', null);
+                location.reload();
+            });
+        }
+    });
+}
+
+/**
+ * Resolves in a package definition or `null`.
+ * A package definition has this format:
+ * ```
+ * {
+ *   url: <string>
+ *   version: <string>
+ *   files: [<string>, ...]
+ * }
+ * ```
+ */
+function getPackageDef() {
+    return new Promise(function (resolve, reject) {
+        getRepositoryUrl().then( getPackageUrl ).then(function( pkgUrl ) {
+            var url = pkgUrl.repo + "?" + pkgUrl.id;
+            fetch( url ).then(function( response ) {
+                if( !response.ok ) throw { message: response.status + ": " + response.statusText };
+                return response.json();
+            }).then(function(pkgDef) {
+                resolve(pkgDef);
+            }).catch(function(err) {
+                manageNetworkFailure( url, err ).then( resolve );
+            });
+        });
+    });
+}
+
+/**
+ * Close the mian window, hence exit the application.
+ */
+function exitApp() {
     Modal.confirm(_('confirm-exit'), function() {
         nw.Window.get().close();
     });
-};
+}
+
+/**
+ * Execute the application by loading `index.html` page.
+ */
+function execApp() {
+    $('iframe').setAttribute( 'src', 'index.html' );
+}
+
+/**
+ * Install package stored in `/tolokoban-nw/package`.
+ */
+function installPackage( pkg ) {
+    return new Promise(function (resolve, reject) {
+        alert('TODO!');
+    });
+}
+
+/**
+ * Create directories recursively.
+ * If they are already created, no problem.
+ */
+function mkdir(folder) {
+    var folders = folder.split( '/' );
+    var dir = '.';
+    folders.forEach(function (folder) {
+        dir += '/' + folder;
+        if( !FS.existsSync( dir ) ) {
+            FS.mkdir( dir );
+        }
+    });
+}
+
+
+
+
+
+
+
+
 
 
 function launch() {
@@ -81,8 +264,14 @@ function install( pkg ) {
     });
     var loading = new Modal({ padding: true, content: [new Wait({ text: _('loading') })] });
     var ok = Button.Ok();
+    var exit = new Button({ text: _('exit'), icon: "close", type: 'simple' });
+    exit.on(function() {
+        nw.Window.get().close();
+    });
     var content = $.div([
-        repo, ok
+        repo, ok,
+        $.tag('hr'),
+        $.tag('center', [exit])
     ]);
     DB.bind( repo, 'action', ok, 'fire' );
     var modal = new Modal({ padding: true, content: content });
@@ -116,8 +305,8 @@ function install( pkg ) {
             location.reload();
         }).catch(function(err) {
             console.error( err );
-            Err( err );
-            modal.detach();
+            repo.focus = true;
+            Err( "<html>" + _('bad-repo') + "<br/>" + err.message );
         });
     });
 }
@@ -164,17 +353,6 @@ function download(def) {
 }
 
 
-function mkdir(folder) {
-    var folders = folder.split( '/' );
-    var dir = '.';
-    folders.forEach(function (folder) {
-        dir += '/' + folder;
-        if( !FS.existsSync( dir ) ) {
-            FS.mkdir( dir );
-        }
-    });
-}
-
 
 function upgrade( def ) {
     return new Promise(function (resolve, reject) {
@@ -203,7 +381,7 @@ function upgrade( def ) {
                     next();
                 });
             });
-        };        
+        };
         next();
     });
 }

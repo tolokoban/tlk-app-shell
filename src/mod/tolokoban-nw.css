@@ -27,3 +27,11 @@ iframe {
     border: 0;
     margin: 0;
 }
+
+pre.error {
+    margin: .3rem;
+    padding: .3rem;
+    color: #fff;
+    background: red;
+    box-shadow: 0 4px 8px rgba(0,0,0,.5);
+}
