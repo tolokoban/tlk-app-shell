@@ -1,15 +1,15 @@
 <x-html app="tolokoban-nw">
-    <header><wdg:flex>
-        <content>
-            <div id="title">Tolokoban App Container</div>
-            <div id="tooltip"></div>
-            <wdg:button id="close" 
-                        intl:text="exit" 
-                        $type="simple" 
+    <header>
+        <div id="title">Tolokoban App Container</div>
+        <div id="tooltip"></div>
+        <div>
+            <wdg:button id="close"
+                        intl:text="exit"
+                        $type="simple"
                         $icon="close"
                         slot:action="onExit"/>
-        </content>
-    </wdg:flex></header>
+        </div>
+    </header>
 
     <iframe id="iframe"></iframe>
 </x-html>

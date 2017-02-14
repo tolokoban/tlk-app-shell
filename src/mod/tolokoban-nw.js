@@ -20,36 +20,46 @@ var Path = require("node://path");
 var g_rootFolder = Path.resolve('.');
 var g_config;
 
+var APP_ID = "tlk-app-shell";
+var PACKAGE_DIR = APP_ID + "/package";
+
+
 function get(key, def) {
-    return Local.get('tolokoban-nw' + '/' + key, def);
+    return Local.get(APP_ID + '/' + key, def);
 }
 
 function set(key, val) {
-    return Local.set('tolokoban-nw' + '/' + key, val);
+    return Local.set(APP_ID + '/' + key, val);
 }
 
 
 exports.start = function() {
-    Modal.alert("Start debugger now!", function() {
-        FS.readFile("package.json", function(err, out) {
-            if( err ) {
-                Err( "<html>Unable to read/parse <b>package.json</b>: <code>" + err.message + "</code>" );
-                return;
-            }
-            try {
-                var jsn = out.toString();
-                g_config = JSON.parse( out.toString() );
-            } catch( ex ) {
-                Err("Bad JSON syntax in `package.json`!");
-                return;
-            }
-            $('title').textContent = g_config.name + " " + g_config.version;
+    if( location.search == '?debug' ) {
+        nw.Window.get().showDevTools( null, start );
+        //Modal.alert("Start debugger now!", start);
+    } else {
+        start();
+    }
+};
 
-            var pkg = get( 'install' );
-            debugger;
-            if( pkg ) installPackage( pkg ).then( execApp );
-            else checkFirstLaunch();
-        });
+function start() {
+    FS.readFile("package.json", function(err, out) {
+        if( err ) {
+            Err( "<html>Unable to read/parse <b>package.json</b>: <code>" + err.message + "</code>" );
+            return;
+        }
+        try {
+            var jsn = out.toString();
+            g_config = JSON.parse( out.toString() );
+        } catch( ex ) {
+            Err("Bad JSON syntax in `package.json`!");
+            return;
+        }
+        $('title').textContent = g_config.name + " " + g_config.version;
+
+        var pkg = get( 'install' );
+        if( pkg ) installPackage( pkg ).then( execApp );
+        else checkFirstLaunch();
     });
 };
 
@@ -60,16 +70,10 @@ exports.onExit = exitApp;
  */
 function checkFirstLaunch() {
     return new Promise(function (resolve, reject) {
+        log( "> checkFirstLaunch()" );
         getPackageDef().then( downloadPackageIfNeeded )
-        .then( showIndexPage );
+            .then( execApp );
     });
-}
-
-/**
- * Open the page `index.html` in the IFrame.
- */
-function showIndexPage() {
-    $('iframe').setAttribute( 'src', 'index.html' );
 }
 
 /**
@@ -77,6 +81,7 @@ function showIndexPage() {
  */
 function getRepositoryUrl() {
     return new Promise(function (resolve, reject) {
+        log( "> getRepositoryUrl()" );
         var repository = get( 'repository' );
         if( repository ) return resolve( repository );
         var repo = new Text({
@@ -110,6 +115,7 @@ function getRepositoryUrl() {
  */
 function getPackageUrl( repoUrl ) {
     return new Promise(function (resolve, reject) {
+        log( "> getPackageUrl(", repoUrl, ")" );
         set( 'repository', repoUrl );
         var pkgId = get( 'id' );
         if( pkgId ) resolve( repoUrl + "?" + pkgId );
@@ -118,7 +124,6 @@ function getPackageUrl( repoUrl ) {
             if( !response.ok ) throw { message: response.status + ": " + response.statusText };
             return response.json();
         }).then(function( packagesList ) {
-
             // @TODO Manage the case of multi packages by adding a selection screen.
             resolve({
                 repo: repoUrl,
@@ -136,7 +141,7 @@ function getPackageUrl( repoUrl ) {
  */
 function manageNetworkFailure( url, err ) {
     return new Promise(function (resolve, reject) {
-        console.error( "Unable to contact ", url, " because of error ", err );
+        console.error( "[NetworkFailure] Unable to contact ", url, " because of error ", err );
         if( get('version') ) resolve( null );
         else {
             Modal.alert(_('network-error', url, err.message), function() {
@@ -146,6 +151,16 @@ function manageNetworkFailure( url, err ) {
                 location.reload();
             });
         }
+    });
+}
+
+function manageInstallFailure( pkg, err ) {
+    return new Promise(function (resolve, reject) {
+        console.error( "[InstallFailure] Unable to install package ", pkg, " because of error ", err );
+        Modal.alert(_('install-error', pkg.version, err.message), function() {
+            set('version', null);
+            if( !get('version') ) location.reload();
+        });
     });
 }
 
@@ -162,6 +177,7 @@ function manageNetworkFailure( url, err ) {
  */
 function getPackageDef() {
     return new Promise(function (resolve, reject) {
+        log( "> getPackageDef()" );
         getRepositoryUrl().then( getPackageUrl ).then(function( pkgUrl ) {
             var url = pkgUrl.repo + "?" + pkgUrl.id;
             fetch( url ).then(function( response ) {
@@ -185,36 +201,47 @@ function getPackageDef() {
  */
 function downloadPackageIfNeeded( pkg ) {
     // Check existence of download folder.
-    mkdir("tolokoban-nw/download");
+    mkdir( PACKAGE_DIR );
 
     var downloadedFiles = [];
     return new Promise(function (resolve, reject) {
+        log( "> downloadPackageIfNeeded(", pkg, ")" );
         var next = function() {
-            console.info("[tolokoban-nw] pkg=", pkg);
             if( pkg.files.length == 0 ) {
+                log("Download is done!");
+                $('tooltip').textContent = '';
                 pkg.files = downloadedFiles;
-                // @TODO Mettre dans le bon parametre.
-                Local.set('tolokoban-nw/install666', pkg);
-                resolve();
+                set('install', pkg);
+                if( get('version', null) === null ) {
+                    // First install.
+                    installPackage( pkg ).then( resolve );
+                }
                 return;
             }
             $('tooltip').textContent = _('download-progress', pkg.files.length);
             var file = pkg.files.pop();
-            mkdir( 'tolokoban-nw/download/' + Path.dirname( file ) );
+            var dir = PACKAGE_DIR + Path.dirname( file );
             var url = pkg.url + file;
-            fetch( url ).then(function(response) {
+            fetch( url, {
+                cache: 'no-cache',
+                mode: 'cors',
+                redirect: 'follow'
+            }).then(function(response) {
+                log( response.url, response.ok );
                 if( !response.ok ) {
-                    throw Error(response.status + " " + response.statusText + " - " + url);
+                    throw Error(response.status + " " + response.statusText + " - " + response.url);
                 }
                 downloadedFiles.push( file );
                 return response.arrayBuffer();
             }).then(function(arrayBuffer) {
-                var output = Path.resolve(Path.join(g_rootFolder, "tolokoban-nw/download/", file));
+                var output = Path.resolve(Path.join(g_rootFolder, PACKAGE_DIR, file));
+                mkdir( dirname( output ) );
                 var data = new Buffer( arrayBuffer );
-                console.info("[tolokoban-nw] output=", output);
-                console.info("[tolokoban-nw] arrayBuffer=", arrayBuffer);
                 FS.writeFile( output, data, function( err ) {
-                    if( err ) throw Error("Unable to write file: " + output + "\n" + err);
+                    if( err ) {
+                        console.error( "Unable to write file: " + output + "\n", err );
+                        throw Error("Unable to write file: " + output + "\n" + err);
+                    }
                     next();
                 });
             }).catch(function(err) {
@@ -222,15 +249,29 @@ function downloadPackageIfNeeded( pkg ) {
             });
         };
 
-        next();
+        if( !pkg || get('version') === pkg.version ) {
+            // Version is uptodate, or we were unable to download the package definition.
+            log("get('version')=...", get('version'));
+            log("pkg.version=...", pkg.version);
+            resolve( pkg );
+        } else {
+            if( get('version') ) {
+                // New version is downloaded in background.
+                log("Background download...");
+                resolve( pkg );
+            }
+            log("Start download.");
+            next();
+        }
     });
 }
 
 /**
  * Close the mian window, hence exit the application.
  */
-function exitApp() {
-    Modal.confirm(_('confirm-exit'), function() {
+function exitApp( withoutConfirmation ) {
+    if( withoutConfirmation ) nw.Window.get().close();
+    else Modal.confirm(_('confirm-exit'), function() {
         nw.Window.get().close();
     });
 }
@@ -239,15 +280,67 @@ function exitApp() {
  * Execute the application by loading `index.html` page.
  */
 function execApp() {
-    $('iframe').setAttribute( 'src', 'index.html' );
+    try {
+        log( "> execApp()" );
+        if( !FS.existsSync( "./index.html" ) ) {
+            throw Error("Missing start page!");
+        }
+        $('title').textContent = g_config.name + " " + g_config.version;
+        $('iframe').setAttribute( 'src', 'index.html' );
+    } catch( ex ) {
+        set('version', null);
+        Modal.alert(_('install-corruption'), exitApp.bind( null, true ));
+    }
 }
 
 /**
- * Install package stored in `/tolokoban-nw/package`.
+ * Install package stored in `install`.
  */
 function installPackage( pkg ) {
     return new Promise(function (resolve, reject) {
-        alert('TODO!');
+        log( "> installPackage(", pkg, ")" );
+        // If installation failed, the package will be doanloaded again.
+        set('install', null);
+
+        var modal = new Modal({
+            content: new Wait({ text: _('install-progress', pkg.version) })
+        });
+        modal.attach();
+
+        var next = function() {
+            if( pkg.files.length == 0 ) {
+                // Everything has been installed, we can update the version number.
+                set('version', pkg.version);
+                g_config.version = pkg.version;
+                g_config.name = pkg.name;
+                $('tooltip').textContent = '';
+                FS.writeFile( "package.json", JSON.stringify( g_config, null, '    ' ), function( err ) {
+                    modal.detach();
+                    resolve();
+                });
+                return;
+            }
+            $('tooltip').textContent = _('install-progress', pkg.files.length);
+            var file = pkg.files.pop();
+            mkdir( dirname( file ) );
+            FS.readFile( "./" + PACKAGE_DIR + "/" + file, function(err, data) {
+                if( err ) {
+                    console.error( err );
+                    manageInstallFailure( pkg, err );
+                    return;
+                }
+                FS.writeFile( file, data, function( err ) {
+                    if( err ) {
+                        console.error( err );
+                        manageInstallFailure( pkg, err );
+                        return;
+                    }
+                    next();
+                });
+            });
+        };
+        // Start installation in 600 ms to give the time to read the version number.
+        window.setTimeout( next, 600 );
     });
 }
 
@@ -256,187 +349,45 @@ function installPackage( pkg ) {
  * If they are already created, no problem.
  */
 function mkdir(folder) {
-    var folders = folder.split( '/' );
+    var sep = findSeparator(folder);
+    var folders = folder.split( sep );
     var dir = '.';
     folders.forEach(function (folder) {
-        dir += '/' + folder;
+        if( folder.length == 2 && folder.charAt(1) == ':' ) {
+            // dealing with windows drive letter (example: `C:`).
+            dir = folder;
+        } else {
+            dir += sep + folder;
+        }
         if( !FS.existsSync( dir ) ) {
-            FS.mkdir( dir );
+            log( "mkdir ", dir );
+            FS.mkdirSync( dir );
         }
     });
 }
-
-
-
-
-
-
-
-
-
-
-function launch() {
-    FS.readFile("package.json", function(err, out) {
-        if( err ) {
-            Err( err );
-            return;
-        }
-        try {
-            var jsn = out.toString();
-            var pkg = JSON.parse( out.toString() );
-            if( !checkForUpdates( pkg ) ) return;
-        } catch( ex ) {
-            Err("Bad JSON syntax in `package.json`!");
-            return;
-        }
-        $('title').textContent = pkg.name + " " + pkg.version;
-        $('iframe').setAttribute( 'src', 'index.html' );
-    });
-}
-
 
 /**
- * Two cases: first install or update.
+ * Remove the filename at the end of `path`.
  */
-function checkForUpdates( pkg ) {
-    if( !pkg.tfw || !pkg.tfw.app
-        || typeof pkg.tfw.app.id !== 'string' )
-    {
-        install( pkg );
-        return false;
-    }
-
-    return true;
+function dirname( path ) {
+    var pos = path.lastIndexOf( findSeparator(path) );
+    if( pos == -1 ) return path;
+    return path.substr(0, pos);
 }
 
-
-function install( pkg ) {
-    if( typeof pkg.tfw === 'undefined' ) pkg.tfw = {};
-    if( typeof pkg.tfw.app === 'undefined' ) pkg.tfw.app = {};
-    var repo = new Text({
-        label: _('repository'), wide: false, width: '30rem',
-        value: 'http://localhost/Cameroun/index.php'
-    });
-    var loading = new Modal({ padding: true, content: [new Wait({ text: _('loading') })] });
-    var ok = Button.Ok();
-    var exit = new Button({ text: _('exit'), icon: "close", type: 'simple' });
-    exit.on(function() {
-        nw.Window.get().close();
-    });
-    var content = $.div([
-        repo, ok,
-        $.tag('hr'),
-        $.tag('center', [exit])
-    ]);
-    DB.bind( repo, 'action', ok, 'fire' );
-    var modal = new Modal({ padding: true, content: content });
-    modal.attach();
-    window.setTimeout(function() {
-        repo.focus = true;
-    }, 300);
-    ok.on(function() {
-        var url = repo.value.trim();
-        fetch( url ).then(function(response) {
-            console.info("[tolokoban-nw] response=", response);
-            if( !response.ok ) {
-                Err(_('bad-repo') + " - " + response.status);
-                repo.focus = true;
-                return;
-            }
-            modal.detach();
-            Local.set('tolokoban-nw/repository', url);
-            return response.json();
-        }).then(function(list) {
-            console.info("[tolokoban-nw] list=", list);
-            return fetch( url + '?' + list[0].id )
-        }).then(function(response) {
-            return response.json();
-        }).then(function(def) {
-            console.info("[tolokoban-nw] def=", def);
-            loading.attach();
-            return download( def );
-        }).then(function() {
-            loading.detach();
-            location.reload();
-        }).catch(function(err) {
-            console.error( err );
-            repo.focus = true;
-            Err( "<html>" + _('bad-repo') + "<br/>" + err.message );
-        });
-    });
+/**
+ * Return path separator: `/` or `\`.
+ * The better is to avoid unix-like path with `\`.
+ */
+function findSeparator( path ) {
+    var backslash = path.split('\\').length;
+    var slash = path.split('/').length;
+    if( backslash > slash ) return '\\';
+    return '/';
 }
 
-
-function download(def) {
-    // Check existence of download folder.
-    mkdir("tolokoban-nw/download");
-
-    var downloadedFiles = [];
-    return new Promise(function (resolve, reject) {
-        var next = function() {
-            console.info("[tolokoban-nw] def=", def);
-            if( def.files.length == 0 ) {
-                def.files = downloadedFiles;
-                Local.set('tolokoban-nw/install', def);
-                resolve();
-                return;
-            }
-            $('tooltip').textContent = _('download-progress', def.files.length);
-            var file = def.files.pop();
-            mkdir( 'tolokoban-nw/download/' + Path.dirname( file ) );
-            var url = def.url + file;
-            fetch( url ).then(function(response) {
-                if( !response.ok ) {
-                    throw Error(response.status + " " + response.statusText + " - " + url);
-                }
-                downloadedFiles.push( file );
-                return response.arrayBuffer();
-            }).then(function(arrayBuffer) {
-                var output = Path.resolve(Path.join(g_rootFolder, "tolokoban-nw/download/", file));
-                var data = new Buffer( arrayBuffer );
-                console.info("[tolokoban-nw] output=", output);
-                console.info("[tolokoban-nw] arrayBuffer=", arrayBuffer);
-                FS.writeFile( output, data, function( err ) {
-                    if( err ) throw Error("Unable to write file: " + output + "\n" + err);
-                    next();
-                });
-            }).catch( reject );
-        };
-
-        next();
-    });
-}
-
-
-
-function upgrade( def ) {
-    return new Promise(function (resolve, reject) {
-        var next = function() {
-            if( def.files.length == 0 ) {
-                $('tooltip').textContent = '';
-                Local.set('tolokoban-nw/install', null);
-                resolve();
-                return;
-            }
-            $('tooltip').textContent = _('install-progress', def.files.length);
-            var file = def.files.pop();
-            mkdir( Path.dirname( file ) );
-            FS.readFile( "./tolokoban-nw/download/" + file, function(err, data) {
-                if( err ) {
-                    console.error( err );
-                    reject( err );
-                    return;
-                }
-                FS.writeFile( file, data, function( err ) {
-                    if( err ) {
-                        console.error( err );
-                        reject( err );
-                        return;
-                    }
-                    next();
-                });
-            });
-        };
-        next();
-    });
+function log() {
+    var args = Array.prototype.slice.call( arguments );
+    args.unshift( "[" + APP_ID + "]" );
+    console.log.apply( console, args );
 }

@@ -1,4 +1,4 @@
-/** @module $ */require( '$', function(require, module, exports) {     exports.config={"name":"\"tolokoban-app-container\"","description":"\"Tolokoban App Container\"","author":"\"tolokoban\"","version":"\"0.2.0\"","major":"0","minor":"2","revision":"0","date":"2017-02-12T13:40:40.000Z","consts":{"mode":"debug"}};
+/** @module $ */require( '$', function(require, module, exports) {    exports.config={"name":"\"cameroun\"","description":"\"Cameroun\"","author":"\"tolokoban\"","version":"\"0.2.6\"","major":"0","minor":"2","revision":"6","date":"2017-02-14T14:02:15.000Z","consts":{"tfw":"http://tolokoban.org/Cameroun/tfw"}};
 var currentLang = null;
 exports.lang = function(lang) {
     if (lang === undefined) {
