@@ -1,77 +1,77 @@
 {
-    "name": "cameroun",
-    "author": "tolokoban",
-    "description": "Tolokoban App Container",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/tolokoban/tolokoban-nw.git"
+  "name": "tolokoban-app-container",
+  "author": "tolokoban",
+  "description": "Tolokoban App Container",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tolokoban/tolokoban-nw.git"
+  },
+  "homepage": "https://github.com/tolokoban/tolokoban-nw",
+  "license": "GPL-3.0",
+  "scripts": {
+    "test": "node node_modules/karma/bin/karma start karma.conf.js",
+    "test:dbg": "node --debug-brk node_modules/karma/bin/karma start karma.conf.js",
+    "debug": "node node_modules/toloframework/bin/tfw.js build debug",
+    "clean": "node node_modules/toloframework/bin/tfw.js clean",
+    "release": "node node_modules/toloframework/bin/tfw.js build version clean"
+  },
+  "bugs": {
+    "url": "https://github.com/tolokoban/tolokoban-nw/issues"
+  },
+  "tfw": {
+    "app": {
+      "repository": "http://localhost/Cameroun",
+      "version": "0"
     },
-    "homepage": "https://github.com/tolokoban/tolokoban-nw",
-    "license": "GPL-3.0",
-    "scripts": {
-        "test": "node node_modules/karma/bin/karma start karma.conf.js",
-        "test:dbg": "node --debug-brk node_modules/karma/bin/karma start karma.conf.js",
-        "debug": "node node_modules/toloframework/bin/tfw.js build debug",
-        "clean": "node node_modules/toloframework/bin/tfw.js clean",
-        "release": "node node_modules/toloframework/bin/tfw.js build version clean"
+    "modules": [],
+    "compile": {
+      "type": "nodewebkit",
+      "files": [
+        "tolokoban-nw.html$"
+      ]
     },
-    "bugs": {
-        "url": "https://github.com/tolokoban/tolokoban-nw/issues"
+    "consts": {
+      "debug": {
+        "mode": "debug"
+      },
+      "release": {
+        "mode": "release"
+      }
     },
-    "tfw": {
-        "app": {
-            "repository": "http://localhost/Cameroun",
-            "version": "0"
-        },
-        "modules": [],
-        "compile": {
-            "type": "nodewebkit",
-            "files": [
-                "tolokoban-nw.html$"
-            ]
-        },
-        "consts": {
-            "debug": {
-                "mode": "debug"
-            },
-            "release": {
-                "mode": "release"
-            }
-        },
-        "output": "./www"
-    },
-    "version": "0.2.6",
-    "reservedModules": [
-        "fs",
-        "path",
-        "process",
-        "child_process",
-        "cluster",
-        "http",
-        "os",
-        "crypto",
-        "dns",
-        "domain",
-        "events",
-        "https",
-        "net",
-        "readline",
-        "stream",
-        "string_decoder",
-        "tls",
-        "dgram",
-        "util",
-        "vm",
-        "zlib"
-    ],
-    "dependencies": {
-        "toloframework": "^0.39.28"
-    },
-    "main": "tolokoban-nw.html?debug",
-    "window": {
-        "fullscreen": true
-    },
-    "devDependencies": {
-        "toloframework": "^0.39.63"
-    }
+    "output": "./www"
+  },
+  "version": "0.2.11",
+  "reservedModules": [
+    "fs",
+    "path",
+    "process",
+    "child_process",
+    "cluster",
+    "http",
+    "os",
+    "crypto",
+    "dns",
+    "domain",
+    "events",
+    "https",
+    "net",
+    "readline",
+    "stream",
+    "string_decoder",
+    "tls",
+    "dgram",
+    "util",
+    "vm",
+    "zlib"
+  ],
+  "dependencies": {
+    "toloframework": "^0.39.28"
+  },
+  "main": "tolokoban-nw.html?debug",
+  "window": {
+    "fullscreen": true
+  },
+  "devDependencies": {
+    "toloframework": "^0.39.63"
+  }
 }

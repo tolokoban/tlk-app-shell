@@ -7,6 +7,7 @@
 
 var $ = require("dom");
 var DB = require("tfw.data-binding");
+var Msg = require("tfw.message").info;
 var Err = require("tfw.message").error;
 var Text = require("wdg.text");
 var Wait = require("wdg.wait");
@@ -215,6 +216,8 @@ function downloadPackageIfNeeded( pkg ) {
                 if( get('version', null) === null ) {
                     // First install.
                     installPackage( pkg ).then( resolve );
+                } else {
+                    Msg( _('available', pkg.version) );
                 }
                 return;
             }

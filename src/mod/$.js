@@ -1,4 +1,4 @@
-exports.config={"name":"\"tolokoban-app-container\"","description":"\"Tolokoban App Container\"","author":"\"tolokoban\"","version":"\"0.2.10\"","major":"0","minor":"2","revision":"10","date":"2017-02-14T13:54:24.000Z","consts":{"mode":"release"}};
+exports.config={"name":"\"tolokoban-app-container\"","description":"\"Tolokoban App Container\"","author":"\"tolokoban\"","version":"\"0.2.11\"","major":"0","minor":"2","revision":"11","date":"2017-02-14T14:48:01.000Z","consts":{"mode":"release"}};
 var currentLang = null;
 exports.lang = function(lang) {
     if (lang === undefined) {
