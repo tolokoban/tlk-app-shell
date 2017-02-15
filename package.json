@@ -67,7 +67,7 @@
     "dependencies": {
         "toloframework": "^0.39.28"
     },
-    "main": "tolokoban-nw.html?debug",
+    "main": "tlk-app-shell.html?debug",
     "window": {
         "fullscreen": true
     },
