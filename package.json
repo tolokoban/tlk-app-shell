@@ -1,7 +1,7 @@
 {
-    "name": "tolokoban-app-container",
+    "name": "tlk-app-shell",
     "author": "tolokoban",
-    "description": "Tolokoban App Container",
+    "description": "Tolokoban App Shell",
     "repository": {
         "type": "git",
         "url": "https://github.com/tolokoban/tolokoban-nw.git"
@@ -40,7 +40,7 @@
         },
         "output": "./www"
     },
-    "version": "0.2.14",
+    "version": "0.2.23",
     "reservedModules": [
         "fs",
         "path",

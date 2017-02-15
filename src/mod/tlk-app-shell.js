@@ -355,6 +355,10 @@ function mkdir(folder) {
     var sep = findSeparator(folder);
     var folders = folder.split( sep );
     var dir = '.';
+    if( folder.charAt(0) == '/' ) {
+        // Deal with absolute path.
+        dir = '';
+    }
     folders.forEach(function (folder) {
         if( folder.length == 2 && folder.charAt(1) == ':' ) {
             // dealing with windows drive letter (example: `C:`).
