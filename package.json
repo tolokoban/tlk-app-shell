@@ -1,5 +1,5 @@
 {
-   "name": "tolokoban-app-container",
+    "name": "tolokoban-app-container",
     "author": "tolokoban",
     "description": "Tolokoban App Container",
     "repository": {
@@ -40,12 +40,34 @@
         },
         "output": "./www"
     },
-    "version": "0.2.0",
-    "reservedModules": [],
+    "version": "0.2.12",
+    "reservedModules": [
+        "fs",
+        "path",
+        "process",
+        "child_process",
+        "cluster",
+        "http",
+        "os",
+        "crypto",
+        "dns",
+        "domain",
+        "events",
+        "https",
+        "net",
+        "readline",
+        "stream",
+        "string_decoder",
+        "tls",
+        "dgram",
+        "util",
+        "vm",
+        "zlib"
+    ],
     "dependencies": {
         "toloframework": "^0.39.28"
     },
-    "main": "tolokoban-nw.html",
+    "main": "tolokoban-nw.html?debug",
     "window": {
         "fullscreen": true
     },
