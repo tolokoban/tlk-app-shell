@@ -27,7 +27,7 @@
         "compile": {
             "type": "nodewebkit",
             "files": [
-                "tolokoban-nw.html$"
+                "tlk-app-shell.html$"
             ]
         },
         "consts": {
@@ -40,7 +40,7 @@
         },
         "output": "./www"
     },
-    "version": "0.2.12",
+    "version": "0.2.14",
     "reservedModules": [
         "fs",
         "path",
