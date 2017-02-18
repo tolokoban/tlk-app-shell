@@ -40,7 +40,7 @@
         },
         "output": "./www"
     },
-    "version": "0.2.24",
+    "version": "0.2.29",
     "reservedModules": [
         "fs",
         "path",
@@ -64,14 +64,11 @@
         "vm",
         "zlib"
     ],
-    "dependencies": {
-        "toloframework": "^0.39.28"
-    },
     "main": "tlk-app-shell.html?debug",
     "window": {
         "fullscreen": true
     },
     "devDependencies": {
-        "toloframework": "^0.39.63"
+        "toloframework": "^0.40"
     }
 }

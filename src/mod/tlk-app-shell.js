@@ -20,6 +20,8 @@ var Path = require("node://path");
 
 var g_rootFolder = Path.resolve('.');
 var g_config;
+// If there is no network, the download is postpone until the network is up again.
+var g_downloadIsDone = false;
 
 var APP_ID = "tlk-app-shell";
 var PACKAGE_DIR = APP_ID + "/package";
@@ -37,13 +39,14 @@ function set(key, val) {
 exports.start = function() {
     if( location.search == '?debug' ) {
         nw.Window.get().showDevTools( null, start );
-        //Modal.alert("Start debugger now!", start);
     } else {
         start();
     }
 };
 
 function start() {
+    debugger;
+    $.on( 'network', showAdmin );
     FS.readFile("package.json", function(err, out) {
         if( err ) {
             Err( "<html>Unable to read/parse <b>package.json</b>: <code>" + err.message + "</code>" );
@@ -58,6 +61,7 @@ function start() {
         }
         $('title').textContent = g_config.name + " " + g_config.version;
 
+        updateNetworkStatus();
         var pkg = get( 'install' );
         if( pkg ) installPackage( pkg ).then( execApp );
         else checkFirstLaunch();
@@ -87,7 +91,7 @@ function getRepositoryUrl() {
         if( repository ) return resolve( repository );
         var repo = new Text({
             label: _('repository'), wide: false, width: '30rem',
-            value: 'http://localhost/www/Cameroun/index.php'
+            value: get( 'repository', '' )
         });
         var loading = new Modal({ padding: true, content: [new Wait({ text: _('loading') })] });
         var ok = Button.Ok();
@@ -105,6 +109,7 @@ function getRepositoryUrl() {
             repo.focus = true;
         }, 300);
         ok.on(function() {
+            set( 'repository', repo.value.trim() );
             resolve( repo.value.trim() );
         });
     });
@@ -210,6 +215,7 @@ function downloadPackageIfNeeded( pkg ) {
         var next = function() {
             if( pkg.files.length == 0 ) {
                 log("Download is done!");
+                g_downloadIsDone = true;
                 $('tooltip').textContent = '';
                 pkg.files = downloadedFiles;
                 set('install', pkg);
@@ -397,4 +403,58 @@ function log() {
     var args = Array.prototype.slice.call( arguments );
     args.unshift( "[" + APP_ID + "]" );
     console.log.apply( console, args );
+}
+
+
+/**
+ * Update the network indicator. Red for offline and red for online.
+ */
+function updateNetworkStatus() {
+    if( navigator.onLine ) {
+        $.addClass( 'network', 'online' );
+    } else {
+        $.removeClass( 'network', 'online' );
+    }
+}
+
+/**
+ *
+ */
+function addNetworkStatusListeners() {
+    window.addEventListener('online',  function() {
+        updateNetworkStatus();
+        if( !g_downloadIsDone ) {
+            getPackageDef().then( downloadPackageIfNeeded );
+        }
+    });
+    window.addEventListener('offline', updateNetworkStatus);
+}
+
+/**
+ * We need  an admin screen to  change the repository URL  and control
+ * the update process.
+ */
+function showAdmin() {
+    var btnReset = new Button({ text: _('reset') });
+    var repo = new Text({
+        label: _('repository'), wide: false, width: '30rem',
+        value: get( 'repository', '' )
+    });
+    var content = $.div([
+        repo, $.tag( 'br' ),
+        "id: ", $.tag('b', [get('id') || '---']),
+        ", version: ", $.tag('b', [get('version') || '---']),
+        ", install: ", $.tag('b', [get('install') || '---']),
+        btnReset
+    ]);
+    btnReset.on(function() {
+        set( 'install', '' );
+        set( 'version', '' );
+        set( 'repository', repo.value.trim() );
+        getPackageDef()
+            .then( downloadPackageIfNeeded )
+            .then( installPackage )
+            .then( location.reload.bind( location ) );
+    });
+    Modal.alert( content );
 }

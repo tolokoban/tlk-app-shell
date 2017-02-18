@@ -1,4 +1,4 @@
-exports.config={"name":"\"tlk-app-shell\"","description":"\"Tolokoban App Shell\"","author":"\"tolokoban\"","version":"\"0.2.24\"","major":"0","minor":"2","revision":"24","date":"2017-02-15T14:57:38.000Z","consts":{"mode":"release"}};
+exports.config={"name":"\"tlk-app-shell\"","description":"\"Tolokoban App Shell\"","author":"\"tolokoban\"","version":"\"0.2.29\"","major":"0","minor":"2","revision":"29","date":"2017-02-18T14:00:43.000Z","consts":{"mode":"debug"}};
 var currentLang = null;
 exports.lang = function(lang) {
     if (lang === undefined) {

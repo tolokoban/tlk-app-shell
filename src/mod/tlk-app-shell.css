@@ -52,15 +52,29 @@ pre.error {
 header > div {
     display: table-cell;
     vertical-align: middle;
-    text-align: center;
+    text-align: left;
     padding-left: .5rem;
 }
 
-header > div:first-child {
-    text-align: left;
+header > div.center {
+    text-align: center;
 }
 
 header > div:last-child {
     text-align: right;
 }
     
+#network {
+    vertical-align: middle;
+    display: inline-block;
+    border-radius: 100%;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 4px #fff;
+    background: red;
+}
+
+#network.online {
+    background: #0f0;
+}
