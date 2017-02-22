@@ -40,7 +40,7 @@
         },
         "output": "./www"
     },
-    "version": "0.2.29",
+    "version": "0.2.30",
     "reservedModules": [
         "fs",
         "path",
