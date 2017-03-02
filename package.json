@@ -40,7 +40,7 @@
         },
         "output": "./www"
     },
-    "version": "0.2.30",
+    "version": "0.2.50",
     "reservedModules": [
         "fs",
         "path",
@@ -64,7 +64,7 @@
         "vm",
         "zlib"
     ],
-    "main": "tlk-app-shell.html?debug",
+    "main": "tlk-app-shell.html?no-debug",
     "window": {
         "fullscreen": true
     },

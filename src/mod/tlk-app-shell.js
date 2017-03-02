@@ -12,7 +12,6 @@ var Err = require("tfw.message").error;
 var Text = require("wdg.text");
 var Wait = require("wdg.wait");
 var Modal = require("wdg.modal");
-var Local = require("tfw.storage").local;
 var Button = require("wdg.button");
 
 var FS = require("node://fs");
@@ -26,14 +25,48 @@ var g_downloadIsDone = false;
 var APP_ID = "tlk-app-shell";
 var PACKAGE_DIR = APP_ID + "/package";
 
+var Local = (function() {
+    // On n'utilise pas  le local storage parce qu'il  change quand on
+    // met à jour les fichiers !!! On préfère passer par un fichier de
+    // configuration local.
+    var config = {};
+    var loaded = false;
+    var configFilename = Path.resolve( "./" + APP_ID + ".json" );
 
-function get(key, def) {
-    return Local.get(APP_ID + '/' + key, def);
-}
+    return {
+        get: function(key, def) {
+            if( !loaded ) {
+                loaded = true;
+                console.log("Loading configuration file: ", configFilename);
+                if( FS.existsSync( configFilename ) ) {
+                    var data = FS.readFileSync( configFilename );
+                    try {
+                        config = JSON.parse( data.toString() );
+                        console.log("config: ", config);
+                    } catch( ex ) {
+                        console.error( "[" + APP_ID + "] Unable to parse config file!", {
+                            ex: ex, data: data.toString()
+                        });
+                        config = {};
+                    }
+                } else {
+                    console.log("There is no configuration file!");
+                    config = {};
+                }
+            }
+            return config[key] || def;
+        },
 
-function set(key, val) {
-    return Local.set(APP_ID + '/' + key, val);
-}
+        set: function(key, val) {
+            config[key] = val;
+            FS.writeFile( configFilename, JSON.stringify( config, null, '  ' ), function( err ) {
+                if( err ) {
+                    console.error( "[" + APP_ID + "] Unable to write config file!", err);
+                }
+            });
+        }
+    };
+})();
 
 
 exports.start = function() {
@@ -62,7 +95,7 @@ function start() {
         $('title').textContent = g_config.name + " " + g_config.version;
 
         updateNetworkStatus();
-        var pkg = get( 'install' );
+        var pkg = Local.get( 'install' );
         if( pkg ) installPackage( pkg ).then( execApp );
         else checkFirstLaunch();
     });
@@ -87,14 +120,15 @@ function checkFirstLaunch() {
 function getRepositoryUrl() {
     return new Promise(function (resolve, reject) {
         log( "> getRepositoryUrl()" );
-        var repository = get( 'repository' );
+        var repository = Local.get( 'repository' );
         if( repository ) return resolve( repository );
         var repo = new Text({
             label: _('repository'), wide: false, width: '30rem',
-            value: get( 'repository', '' )
+            value: Local.get( 'repository', '' )
         });
         var loading = new Modal({ padding: true, content: [new Wait({ text: _('loading') })] });
         var ok = Button.Ok();
+        DB.bind( repo, 'action', ok.fire.bind( ok ) );
         var exit = new Button({ text: _('exit'), icon: "close", type: 'simple' });
         exit.on( exitApp );
         var content = $.div([
@@ -109,7 +143,8 @@ function getRepositoryUrl() {
             repo.focus = true;
         }, 300);
         ok.on(function() {
-            set( 'repository', repo.value.trim() );
+            modal.detach();
+            Local.set( 'repository', repo.value.trim() );
             resolve( repo.value.trim() );
         });
     });
@@ -122,21 +157,24 @@ function getRepositoryUrl() {
 function getPackageUrl( repoUrl ) {
     return new Promise(function (resolve, reject) {
         log( "> getPackageUrl(", repoUrl, ")" );
-        set( 'repository', repoUrl );
-        var pkgId = get( 'id' );
-        if( pkgId ) resolve( repoUrl + "?" + pkgId );
+        Local.set( 'repository', repoUrl );
+        var pkgId = Local.get( 'id' );
+        log("pkgId=", pkgId);
+        if( pkgId ) return resolve({ repo: repoUrl,  id: pkgId });
         // Ask the repository the list of packages.
+        log("Asking a package ID...");
         fetch( repoUrl ).then(function(response) {
             if( !response.ok ) throw { message: response.status + ": " + response.statusText };
             return response.json();
         }).then(function( packagesList ) {
             // @TODO Manage the case of multi packages by adding a selection screen.
+            console.info("[tlk-app-shell] packagesList=", packagesList);
             resolve({
                 repo: repoUrl,
                 id: packagesList[0].id
             });
         }).catch(function(err) {
-            manageNetworkFailure( repoUrl, err ).then( resolve );
+            manageNetworkFailure( repoUrl, err ).then( resolve, reject );
         });
     });
 }
@@ -148,12 +186,15 @@ function getPackageUrl( repoUrl ) {
 function manageNetworkFailure( url, err ) {
     return new Promise(function (resolve, reject) {
         console.error( "[NetworkFailure] Unable to contact ", url, " because of error ", err );
-        if( get('version') ) resolve( null );
-        else {
+        if( Local.get('version') ) {
+            log("No connection to check updates! We will use the local version: ", 
+                Local.get('version'));
+            resolve( null );
+        } else {
             Modal.alert(_('network-error', url, err.message), function() {
-                set('repository', null);
-                set('id', null);
-                set('version', null);
+                Local.set('repository', null);
+                Local.set('id', null);
+                Local.set('version', null);
                 location.reload();
             });
         }
@@ -164,8 +205,8 @@ function manageInstallFailure( pkg, err ) {
     return new Promise(function (resolve, reject) {
         console.error( "[InstallFailure] Unable to install package ", pkg, " because of error ", err );
         Modal.alert(_('install-error', pkg.version, err.message), function() {
-            set('version', null);
-            if( !get('version') ) location.reload();
+            Local.set('version', null);
+            if( !Local.get('version') ) location.reload();
         });
     });
 }
@@ -185,7 +226,12 @@ function getPackageDef() {
     return new Promise(function (resolve, reject) {
         log( "> getPackageDef()" );
         getRepositoryUrl().then( getPackageUrl ).then(function( pkgUrl ) {
+            if( !pkgUrl ) {
+                resolve( null );
+                return;
+            }
             var url = pkgUrl.repo + "?" + pkgUrl.id;
+            console.log("Fetching package definition: ", url);
             fetch( url ).then(function( response ) {
                 if( !response.ok ) throw { message: response.status + ": " + response.statusText };
                 return response.json();
@@ -199,9 +245,9 @@ function getPackageDef() {
 }
 
 /**
- * If `get("version")` is missing  or different from `pkg.version`, we
+ * If `Local.get("version")` is missing  or different from `pkg.version`, we
  * must download the package files.
- * It  `get("version")` is  not  missing, the  downloads  will run  in
+ * It  `Local.get("version")` is  not  missing, the  downloads  will run  in
  * background. Otherwise, we will wait for all the downloads to finish
  * before resolving.
  */
@@ -212,14 +258,16 @@ function downloadPackageIfNeeded( pkg ) {
     var downloadedFiles = [];
     return new Promise(function (resolve, reject) {
         log( "> downloadPackageIfNeeded(", pkg, ")" );
+        if( !pkg ) return resolve( null );
+        
         var next = function() {
             if( pkg.files.length == 0 ) {
                 log("Download is done!");
                 g_downloadIsDone = true;
                 $('tooltip').textContent = '';
                 pkg.files = downloadedFiles;
-                set('install', pkg);
-                if( get('version', null) === null ) {
+                Local.set('install', pkg);
+                if( Local.get('version', null) === null ) {
                     // First install.
                     installPackage( pkg ).then( resolve );
                 } else {
@@ -258,13 +306,13 @@ function downloadPackageIfNeeded( pkg ) {
             });
         };
 
-        if( !pkg || get('version') === pkg.version ) {
+        if( !pkg || Local.get('version') === pkg.version ) {
             // Version is uptodate, or we were unable to download the package definition.
-            log("get('version')=...", get('version'));
+            log("get('version')=...", Local.get('version'));
             log("pkg.version=...", pkg.version);
             resolve( pkg );
         } else {
-            if( get('version') ) {
+            if( Local.get('version') ) {
                 // New version is downloaded in background.
                 log("Background download...");
                 resolve( pkg );
@@ -297,7 +345,7 @@ function execApp() {
         $('title').textContent = g_config.name + " " + g_config.version;
         $('iframe').setAttribute( 'src', 'index.html' );
     } catch( ex ) {
-        set('version', null);
+        Local.set('version', null);
         Modal.alert(_('install-corruption'), exitApp.bind( null, true ));
     }
 }
@@ -309,7 +357,7 @@ function installPackage( pkg ) {
     return new Promise(function (resolve, reject) {
         log( "> installPackage(", pkg, ")" );
         // If installation failed, the package will be doanloaded again.
-        set('install', null);
+        Local.set('install', null);
 
         var modal = new Modal({
             content: new Wait({ text: _('install-progress', pkg.version) })
@@ -319,7 +367,7 @@ function installPackage( pkg ) {
         var next = function() {
             if( pkg.files.length == 0 ) {
                 // Everything has been installed, we can update the version number.
-                set('version', pkg.version);
+                Local.set('version', pkg.version);
                 g_config.version = pkg.version;
                 g_config.name = pkg.name;
                 $('tooltip').textContent = '';
@@ -438,19 +486,19 @@ function showAdmin() {
     var btnReset = new Button({ text: _('reset') });
     var repo = new Text({
         label: _('repository'), wide: false, width: '30rem',
-        value: get( 'repository', '' )
+        value: Local.get( 'repository', '' )
     });
     var content = $.div([
         repo, $.tag( 'br' ),
-        "id: ", $.tag('b', [get('id') || '---']),
-        ", version: ", $.tag('b', [get('version') || '---']),
-        ", install: ", $.tag('b', [get('install') || '---']),
+        "id: ", $.tag('b', [Local.get('id') || '---']),
+        ", version: ", $.tag('b', [Local.get('version') || '---']),
+        ", install: ", $.tag('b', [Local.get('install') || '---']),
         btnReset
     ]);
     btnReset.on(function() {
-        set( 'install', '' );
-        set( 'version', '' );
-        set( 'repository', repo.value.trim() );
+        Local.set( 'install', '' );
+        Local.set( 'version', '' );
+        Local.set( 'repository', repo.value.trim() );
         getPackageDef()
             .then( downloadPackageIfNeeded )
             .then( installPackage )
