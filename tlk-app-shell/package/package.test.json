@@ -1,0 +1,54 @@
+{
+    "name": "cameroun",
+    "author": "tolokoban",
+    "description": "Cameroun",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/tolokoban/cameroun.git"
+    },
+    "homepage": "https://github.com/tolokoban/cameroun",
+    "license": "GPL-3.0",
+    "scripts": {
+        "test": "node node_modules/karma/bin/karma start karma.conf.js",
+        "test:dbg": "node --debug-brk node_modules/karma/bin/karma start karma.conf.js",
+        "watch": "node node_modules/toloframework/bin/tfw.js build dev test php watch",
+        "debug": "node node_modules/toloframework/bin/tfw.js build debug test php",
+        "clean": "node node_modules/toloframework/bin/tfw.js clean",
+        "release": "node node_modules/toloframework/bin/tfw.js build version php clean"
+    },
+    "bugs": {
+        "url": "https://github.com/tolokoban/cameroun/issues"
+    },
+    "tfw": {
+        "modules": [],
+        "compile": {
+            "type": "firefoxos",
+            "files": [
+                "\\.html$"
+            ]
+        },
+        "consts": {
+            "debug": {
+                "tfw": "http://tolokoban.org/Cameroun/tfw"
+            },
+            "release": {
+                "tfw": "http://tolokoban.org/Cameroun/tfw"
+            }
+        },
+        "output": "www"
+    },
+    "version": "0.3.44",
+    "reservedModules": [],
+    "dependencies": {
+        "jasmine-core": "^2",
+        "karma": "^0",
+        "karma-chrome-launcher": "^0",
+        "karma-firefox-launcher": "^0",
+        "karma-jasmine": "^0",
+        "toloframework": "^0"
+    },
+    "main": "index.html",
+    "window": {
+        "fullscreen": true
+    }
+}

@@ -1,0 +1,13 @@
+div.table {
+    display: table;
+}
+
+div.table > div {
+    display: table-row;
+}
+
+div.table > div > div {
+    display: table-cell;
+    vertical-align: middle;
+}
+

@@ -1,0 +1,15 @@
+div.picture-container {
+    position: relative;
+    padding: 0;
+    width: 192px;
+    height: 192px;
+    overflow: hidden;
+    margin: 4px;
+}
+
+div.picture-container > video {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin: 0;
+}

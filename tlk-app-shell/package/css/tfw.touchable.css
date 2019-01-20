@@ -1,0 +1,16 @@
+.tfw-touchable {
+    position: relative;
+    cursor: pointer;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.tfw-touchable > div.tfw-touchable-shadow {
+    content: '.';
+    font-size: 0;
+    color: transparent;
+    position: absolute;
+    border-radius: 100%;
+}

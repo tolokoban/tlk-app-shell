@@ -1,0 +1,17 @@
+div.form > div.table {
+    display: table;
+    width: 100%;
+}
+
+div.form > div.table > div {
+    display: table-row;
+    width: 100%;
+}
+
+div.form > div.table > div > div {
+    display: table-cell;
+    text-align: left;
+    vertical-align: top;
+    padding: 0 .25rem;
+    width: 50%;
+}

@@ -1,0 +1,60 @@
+div.wdg-date2 {
+    position: relative;
+    display: inline-block;
+    width: auto;
+    height: 3rem;
+    padding: 0;
+    margin: .5rem;
+    font-size: 1rem;
+    vertical-align: middle;
+    background-color: #fff;
+}
+
+div.wdg-date2.no-label {
+    height: 2rem;
+}
+
+div.wdg-date2.wide {
+    display: block;
+    width: auto;
+}
+
+div.wdg-date2 input {
+    width: 100%;
+}
+
+
+div.wdg-date2 > * {
+    display: block;
+    margin: 0;
+    width: 100%;
+}
+
+div.wdg-date2 input {
+    height: 2rem;
+    box-shadow: none;
+    padding: 0 .5rem;
+    border: none;
+    color: #000;
+    font-size: 1rem;
+}
+
+div.wdg-date2.no-valid input,
+div.wdg-date2.no-valid input:focus {
+    background-color: #fdd;
+    box-shadow: none;
+    color: red;
+}
+
+div.wdg-date2 input[disabled] {
+    background-color: #aaa;
+}
+
+div.wdg-date2.not-valid input {
+    background-color: #fee;
+    color: #900;
+}
+
+div.wdg-date2.no-label > div.theme-label {
+    display: none;
+}
